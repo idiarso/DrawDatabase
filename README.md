@@ -1,5 +1,7 @@
 # Schema Designer
-
+==========
+MARI KITA KEMBANGKAN JIKA ADA MASUKAN DENGAN SENANG HATI SAYA MENERIMA @ID #SKANSAPUNG
+==============================
 ## Ringkasan
 Schema Designer adalah aplikasi web sumber terbuka untuk membuat, memvisualisasikan, dan berkolaborasi pada diagram skema basis data, terinspirasi oleh DrawSQL.
 

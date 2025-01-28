@@ -1,7 +1,18 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
+import enum
+
+class PermissionLevel(enum.Enum):
+    VIEW = "view"
+    EDIT = "edit"
+    ADMIN = "admin"
+
+class InvitationStatus(enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
 
 class User(Base):
     __tablename__ = "users"
@@ -14,6 +25,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     diagrams = relationship("Diagram", back_populates="owner")
+    collaborations = relationship("DiagramCollaboration", back_populates="user")
 
 class Diagram(Base):
     __tablename__ = "diagrams"
@@ -28,6 +40,7 @@ class Diagram(Base):
 
     owner = relationship("User", back_populates="diagrams")
     tables = relationship("Table", back_populates="diagram")
+    collaborations = relationship("DiagramCollaboration", back_populates="diagram")
 
 class Table(Base):
     __tablename__ = "tables"
@@ -52,3 +65,30 @@ class Column(Base):
     table_id = Column(Integer, ForeignKey("tables.id"))
 
     table = relationship("Table", back_populates="columns")
+
+class DiagramCollaboration(Base):
+    __tablename__ = "diagram_collaborations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    diagram_id = Column(Integer, ForeignKey("diagrams.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    permission_level = Column(Enum(PermissionLevel), default=PermissionLevel.VIEW)
+    joined_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    diagram = relationship("Diagram", back_populates="collaborations")
+    user = relationship("User", back_populates="collaborations")
+
+class DiagramInvitation(Base):
+    __tablename__ = "diagram_invitations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    diagram_id = Column(Integer, ForeignKey("diagrams.id"), nullable=False)
+    inviter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    invited_email = Column(String, nullable=False)
+    permission_level = Column(Enum(PermissionLevel), default=PermissionLevel.VIEW)
+    status = Column(Enum(InvitationStatus), default=InvitationStatus.PENDING)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    diagram = relationship("Diagram")
+    inviter = relationship("User", foreign_keys=[inviter_id])

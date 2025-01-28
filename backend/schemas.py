@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 from datetime import datetime
+from enum import Enum
 
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
@@ -64,12 +65,55 @@ class DiagramBase(BaseModel):
 class DiagramCreate(DiagramBase):
     pass
 
+class PermissionLevelEnum(str, Enum):
+    VIEW = "view"
+    EDIT = "edit"
+    ADMIN = "admin"
+
+class InvitationStatusEnum(str, Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+class CollaboratorBase(BaseModel):
+    user_id: int
+    permission_level: PermissionLevelEnum = PermissionLevelEnum.VIEW
+
+class CollaboratorCreate(CollaboratorBase):
+    pass
+
+class Collaborator(CollaboratorBase):
+    diagram_id: int
+    joined_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class InvitationBase(BaseModel):
+    diagram_id: int
+    invited_email: EmailStr
+    permission_level: PermissionLevelEnum = PermissionLevelEnum.VIEW
+
+class InvitationCreate(InvitationBase):
+    pass
+
+class Invitation(InvitationBase):
+    id: int
+    inviter_id: int
+    status: InvitationStatusEnum = InvitationStatusEnum.PENDING
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        orm_mode = True
+
 class Diagram(DiagramBase):
     id: int
     owner_id: int
     created_at: datetime
     updated_at: Optional[datetime]
     tables: List[Table] = []
+    collaborators: List[Collaborator] = []
 
     class Config:
         orm_mode = True

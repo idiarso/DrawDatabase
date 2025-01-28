@@ -7,6 +7,7 @@ from typing import List
 import models
 import schemas
 import auth
+import collaboration
 from database import engine, SessionLocal, Base
 
 # Create database tables
@@ -169,6 +170,139 @@ def export_diagram(
         "sql_ddl": sql_ddl,
         "json_schema": json_schema
     }
+
+@app.post("/diagrams/{diagram_id}/invite", response_model=dict)
+def invite_collaborator(
+    diagram_id: int,
+    invitation: schemas.InvitationCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Invite a user to collaborate on a diagram
+    """
+    try:
+        result = collaboration.invite_user_to_diagram(
+            db, 
+            diagram_id, 
+            current_user.id, 
+            invitation.invited_email, 
+            invitation.permission_level
+        )
+        return result
+    except HTTPException as e:
+        raise e
+
+@app.get("/diagrams/{diagram_id}/collaborators", response_model=List[dict])
+def get_diagram_collaborators(
+    diagram_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Get all collaborators for a specific diagram
+    """
+    try:
+        collaborators = collaboration.get_diagram_collaborators(
+            db, 
+            diagram_id, 
+            current_user.id
+        )
+        return collaborators
+    except HTTPException as e:
+        raise e
+
+@app.delete("/diagrams/{diagram_id}/collaborators/{collaborator_id}")
+def remove_collaborator(
+    diagram_id: int,
+    collaborator_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Remove a collaborator from a diagram
+    """
+    try:
+        result = collaboration.remove_collaborator(
+            db, 
+            diagram_id, 
+            current_user.id, 
+            collaborator_id
+        )
+        return result
+    except HTTPException as e:
+        raise e
+
+@app.put("/diagrams/{diagram_id}/collaborators/{collaborator_id}/permission")
+def update_collaborator_permission(
+    diagram_id: int,
+    collaborator_id: int,
+    new_permission: schemas.PermissionLevelEnum,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Update a collaborator's permission level
+    """
+    try:
+        result = collaboration.update_collaborator_permission(
+            db, 
+            diagram_id, 
+            current_user.id, 
+            collaborator_id, 
+            new_permission
+        )
+        return result
+    except HTTPException as e:
+        raise e
+
+@app.get("/invitations", response_model=List[schemas.Invitation])
+def get_user_invitations(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Get all pending invitations for the current user
+    """
+    invitations = db.query(models.DiagramInvitation).filter(
+        models.DiagramInvitation.invited_email == current_user.email,
+        models.DiagramInvitation.status == models.InvitationStatus.PENDING
+    ).all()
+    
+    return invitations
+
+@app.post("/invitations/{invitation_id}/accept")
+def accept_invitation(
+    invitation_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Accept a diagram collaboration invitation
+    """
+    invitation = db.query(models.DiagramInvitation).filter(
+        models.DiagramInvitation.id == invitation_id,
+        models.DiagramInvitation.invited_email == current_user.email,
+        models.DiagramInvitation.status == models.InvitationStatus.PENDING
+    ).first()
+    
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+    
+    # Create collaboration entry
+    collaboration_entry = models.DiagramCollaboration(
+        diagram_id=invitation.diagram_id,
+        user_id=current_user.id,
+        permission_level=invitation.permission_level
+    )
+    
+    # Update invitation status
+    invitation.status = models.InvitationStatus.ACCEPTED
+    
+    db.add(collaboration_entry)
+    db.commit()
+    
+    return {"message": "Invitation accepted"}
 
 def generate_sql_ddl(diagram):
     """Generate SQL DDL for a diagram"""

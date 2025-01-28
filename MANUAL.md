@@ -10,6 +10,7 @@
 7. [Ekspor Diagram](#ekspor-diagram)
 8. [Berbagi Diagram](#berbagi-diagram)
 9. [Pemecahan Masalah](#pemecahan-masalah)
+10. [Konfigurasi Email](#konfigurasi-email)
 
 ## Pendahuluan
 
@@ -136,6 +137,41 @@ Setelah login, Anda akan melihat dasbor dengan:
 - Pastikan diagram memiliki setidaknya satu tabel
 - Periksa format yang dipilih
 - Hubungi dukungan jika masalah berlanjut
+
+## Konfigurasi Email
+
+### Persyaratan
+- Akun Gmail
+- Aktifkan "Less secure app access" atau gunakan App Password
+
+### Langkah Konfigurasi
+
+1. Buat App Password untuk Gmail:
+   - Buka [Pengaturan Keamanan Google](https://myaccount.google.com/security)
+   - Aktifkan Verifikasi Dua Faktor
+   - Pilih "App passwords"
+   - Buat password khusus untuk aplikasi
+
+2. Konfigurasi File .env
+   ```
+   SMTP_SERVER=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USERNAME=email_anda@gmail.com
+   SMTP_PASSWORD=app_password_anda
+   FRONTEND_URL=http://localhost:3000
+   ```
+
+3. Pengaturan Keamanan
+   - JANGAN gunakan password utama Gmail
+   - Selalu gunakan App Password
+   - Simpan .env di luar direktori project
+   - Tambahkan .env ke .gitignore
+
+### Troubleshooting
+- Periksa koneksi internet
+- Pastikan kredensial SMTP benar
+- Periksa pengaturan keamanan akun Google
+- Gunakan mode debug untuk informasi lebih detail
 
 ## Dukungan
 
